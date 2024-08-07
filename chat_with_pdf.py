@@ -119,9 +119,9 @@ if __name__ == "__main__":
     check_environment_variable("DB_COLLECTION")
     check_environment_variable("INDEX_NAME")
 
-    bedrock_client = boto3.client("bedrock-runtime", region_name="ap-south-1")
+    bedrock_client = boto3.client("bedrock-runtime", region_name="us-east-1")
     # Use Gecko Embeddings
-    embedding = BedrockEmbeddings(bedrock_client)
+    embedding = BedrockEmbeddings(client=bedrock_client, model_id = "amazon.titan-embed-text-v2:0")
 
     # Connect to Couchbase Vector Store
     cluster = connect_to_couchbase(DB_CONN_STR, DB_USERNAME, DB_PASSWORD)
@@ -147,7 +147,7 @@ if __name__ == "__main__":
     prompt = ChatPromptTemplate.from_template(template)
 
     # Use Gemini Pro as the LLM for the RAG
-    aws_model_id = "meta.llama3-8b-instruct-v1:0"
+    aws_model_id = "amazon.titan-text-express-v1"
     llm = Bedrock(client=bedrock_client, model_id=aws_model_id)
     # RAG chain
     chain = (
@@ -157,24 +157,21 @@ if __name__ == "__main__":
         | StrOutputParser()
     )
 
-    # # Pure Gemini output without RAG
-    # template_without_rag = """You are a helpful bot. Answer the question as truthfully as possible.
+    # Pure Gemini output without RAG
+    template_without_rag = """You are a helpful bot. Answer the question as truthfully as possible.
 
-    # Question: {question}"""
+    Question: {question}"""
 
-    # prompt_without_rag = ChatPromptTemplate.from_template(template_without_rag)
+    prompt_without_rag = ChatPromptTemplate.from_template(template_without_rag)
 
-    # llm_without_rag = GoogleGenerativeAI(
-    #     temperature=0,
-    #     model="models/gemini-1.5-pro",
-    # )
+    llm_without_rag = Bedrock(client=bedrock_client, model_id=aws_model_id)
 
-    # chain_without_rag = (
-    #     {"question": RunnablePassthrough()}
-    #     | prompt_without_rag
-    #     | llm_without_rag
-    #     | StrOutputParser()
-    # )
+    chain_without_rag = (
+        {"question": RunnablePassthrough()}
+        | prompt_without_rag
+        | llm_without_rag
+        | StrOutputParser()
+    )
 
     # Frontend
     couchbase_logo = (
@@ -204,19 +201,19 @@ if __name__ == "__main__":
             """
             For each question, you will get two answers: 
             * one using RAG ([Couchbase logo](https://emoji.slack-edge.com/T024FJS4M/couchbase/4a361e948b15ed91.png))
-            * one using pure LLM - Gemini (🤖). 
+            * one using pure LLM - AWS Titan (🤖). 
             """
         )
 
         st.markdown(
-            "For RAG, we are using [Langchain](https://langchain.com/), [Couchbase Vector Search](https://couchbase.com/) & [Gemini](https://gemini.google.com/). We fetch parts of the PDF relevant to the question using Vector search & add it as the context to the LLM. The LLM is instructed to answer based on the context from the Vector Store."
+            "For RAG, we are using [Langchain](https://langchain.com/), [Couchbase Vector Search](https://couchbase.com/) & [AWS](https://aws.amazon.com/bedrock). We fetch parts of the PDF relevant to the question using Vector search & add it as the context to the LLM. The LLM is instructed to answer based on the context from the Vector Store."
         )
 
-        # View Code
-        if st.checkbox("View Code"):
-            st.write(
-                "View the code here: [Github](https://github.com/couchbaselabs/rag-gemini-demo/blob/master/chat_with_pdf.py)"
-            )
+        # # View Code
+        # if st.checkbox("View Code"):
+        #     st.write(
+        #         "View the code here: [Github](https://github.com/couchbaselabs/rag-gemini-demo/blob/master/chat_with_pdf.py)"
+        #     )
 
     if "messages" not in st.session_state:
         st.session_state.messages = []
@@ -262,23 +259,23 @@ if __name__ == "__main__":
             }
         )
 
-        # # stream the response from the pure LLM
+        # stream the response from the pure LLM
 
-        # # Add placeholder for streaming the response
-        # with st.chat_message("ai", avatar="🤖"):
-        #     message_placeholder_pure_llm = st.empty()
+        # Add placeholder for streaming the response
+        with st.chat_message("ai", avatar="🤖"):
+            message_placeholder_pure_llm = st.empty()
 
-        # pure_llm_response = ""
+        pure_llm_response = ""
 
-        # for chunk in chain_without_rag.stream(question):
-        #     pure_llm_response += chunk
-        #     message_placeholder_pure_llm.markdown(pure_llm_response + "▌")
+        for chunk in chain_without_rag.stream(question):
+            pure_llm_response += chunk
+            message_placeholder_pure_llm.markdown(pure_llm_response + "▌")
 
-        # message_placeholder_pure_llm.markdown(pure_llm_response)
-        # st.session_state.messages.append(
-        #     {
-        #         "role": "assistant",
-        #         "content": pure_llm_response,
-        #         "avatar": "🤖",
-        #     }
-        # )
+        message_placeholder_pure_llm.markdown(pure_llm_response)
+        st.session_state.messages.append(
+            {
+                "role": "assistant",
+                "content": pure_llm_response,
+                "avatar": "🤖",
+            }
+        )

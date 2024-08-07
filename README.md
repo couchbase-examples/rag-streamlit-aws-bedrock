@@ -133,3 +133,18 @@ For RAG, we are using Langchain, Couchbase Vector Search & Gemini Pro. We fetch 
 - #### Run the application
 
   `streamlit run chat_with_pdf.py`
+
+
+Ensure Line 25 is based on whatever scope & collection that i created. in this case, _default _default.
+
+Ensure line 35, is based on 1024 dimensions for AWS Titan
+
+Ensure that line 65 has the bucket name stated, in my case, awsbedrock is the bucket name
+
+Ensure that i am using Titan Text Embeddings V2, amazon.titan-embed-text-v2:0 <- Model Name on line 124
+
+Ensure that i am using US-East-1 on line 122
+
+Ensure that i use Titan Text G1 as its LLM, model name is amazon.titan-text-express-v1 on Line 150
+
+Line 167 - Ensure that the correct LLM models are used, in our case, AWS -  Bedrock(client=bedrock_client, model_id=aws_model_id)
