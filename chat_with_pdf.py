@@ -28,8 +28,10 @@ def save_to_vector_store(uploaded_file, vector_store):
 
         with open(temp_file_path, "wb") as f:
             f.write(uploaded_file.getvalue())
-            loader = PyPDFLoader(temp_file_path)
-            docs = loader.load()
+
+        # Load after the file is closed, so all bytes are flushed to disk.
+        loader = PyPDFLoader(temp_file_path)
+        docs = loader.load()
 
         vector_store.add_documents(docs)
         st.info(f"PDF loaded into vector store in {len(docs)} documents")
