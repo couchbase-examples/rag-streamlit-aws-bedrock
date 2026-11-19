@@ -119,9 +119,17 @@ if __name__ == "__main__":
     check_environment_variable("DB_COLLECTION")
     check_environment_variable("INDEX_NAME")
 
-    bedrock_client = boto3.client("bedrock-runtime", region_name="us-east-1")
-    # Use Gecko Embeddings
-    embedding = BedrockEmbeddings(client=bedrock_client, model_id = "amazon.titan-embed-text-v2:0")
+    # Bedrock settings. The default embedding model returns 1024-dim vectors,
+    # which must match the "dims" in index_definition.json.
+    AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
+    BEDROCK_EMBEDDING_MODEL = os.getenv(
+        "BEDROCK_EMBEDDING_MODEL", "amazon.titan-embed-text-v2:0"
+    )
+    BEDROCK_LLM_MODEL = os.getenv("BEDROCK_LLM_MODEL", "amazon.titan-text-express-v1")
+
+    bedrock_client = boto3.client("bedrock-runtime", region_name=AWS_REGION)
+    # Use Bedrock embeddings
+    embedding = BedrockEmbeddings(client=bedrock_client, model_id=BEDROCK_EMBEDDING_MODEL)
 
     # Connect to Couchbase Vector Store
     cluster = connect_to_couchbase(DB_CONN_STR, DB_USERNAME, DB_PASSWORD)
@@ -146,9 +154,8 @@ if __name__ == "__main__":
 
     prompt = ChatPromptTemplate.from_template(template)
 
-    # Use Gemini Pro as the LLM for the RAG
-    aws_model_id = "amazon.titan-text-express-v1"
-    llm = Bedrock(client=bedrock_client, model_id=aws_model_id)
+    # Use the Bedrock LLM for the RAG
+    llm = Bedrock(client=bedrock_client, model_id=BEDROCK_LLM_MODEL)
     # RAG chain
     chain = (
         {"context": retriever, "question": RunnablePassthrough()}
@@ -164,7 +171,7 @@ if __name__ == "__main__":
 
     prompt_without_rag = ChatPromptTemplate.from_template(template_without_rag)
 
-    llm_without_rag = Bedrock(client=bedrock_client, model_id=aws_model_id)
+    llm_without_rag = Bedrock(client=bedrock_client, model_id=BEDROCK_LLM_MODEL)
 
     chain_without_rag = (
         {"question": RunnablePassthrough()}
